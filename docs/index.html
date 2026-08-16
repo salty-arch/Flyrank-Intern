@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which pages should get a title rewrite first? A CTR-and-decline priority model on FlyRank search data</title>
+<style>
+  :root {
+    --ink: #1b1f23;
+    --paper: #faf8f4;
+    --line: #d8d2c4;
+    --accent: #2f5d50;
+    --accent-soft: #e7efe9;
+    --warn: #9c4221;
+    --muted: #6b6558;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 24px; }
+  header.hero {
+    border-bottom: 3px solid var(--ink);
+    padding: 64px 0 40px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4.4vw, 42px);
+    line-height: 1.15;
+    margin: 0 0 20px;
+    font-weight: 600;
+  }
+  .byline {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+  }
+  .byline span strong { color: var(--ink); }
+
+  section { padding: 44px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    margin: 0 0 6px;
+  }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 16px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code, .mono { font-family: var(--mono); font-size: 0.9em; }
+  code {
+    background: #efe9dc;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .abstract-box {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin-top: 8px;
+  }
+  .abstract-box p { margin: 0; }
+
+  .callout {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fbf1ec; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 22px;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+  }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-family: var(--mono); }
+
+  figure { margin: 24px 0; }
+  figure img {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  figcaption {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 8px;
+    padding-left: 2px;
+    border-left: 2px solid var(--line);
+    padding-left: 10px;
+  }
+  figcaption strong { color: var(--ink); }
+
+  .stat-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 18px 0 24px;
+  }
+  .stat {
+    flex: 1;
+    min-width: 130px;
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+  .stat .n {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .stat .lbl {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .toc {
+    font-family: var(--mono);
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  a { color: var(--accent); }
+  a:hover { color: var(--ink); }
+
+  footer {
+    padding: 40px 0 80px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  footer a { color: var(--accent); }
+
+  .action-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .action-tag.caution { background: #fbf1ec; color: var(--warn); }
+
+  @media (max-width: 600px) {
+    header.hero { padding: 40px 0 28px; }
+    section { padding: 32px 0; }
+    .stat-row { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">FlyRank ML Internship &middot; Search Intelligence &middot; Lane 4</div>
+    <h1>Which pages should get a title rewrite first?<br>A CTR-and-decline priority model on real search data</h1>
+    <div class="byline">
+      <span><strong>Author:</strong> Salman Abid</span>
+      <span><strong>Data:</strong> FlyRank internship warehouse (March 2026 slice)</span>
+      <span><strong>Repo:</strong> <a href="https://github.com/salty-arch/Flyrank-Intern">github.com/salty-arch/Flyrank-Intern</a></span>
+    </div>
+    <nav class="toc">
+      <a href="#abstract">Abstract</a>
+      <a href="#intro">Introduction</a>
+      <a href="#data">Data</a>
+      <a href="#method">Methodology</a>
+      <a href="#results">Results</a>
+      <a href="#limits">Limitations</a>
+      <a href="#recs">Recommendations</a>
+      <a href="#repro">Reproducibility</a>
+      <a href="#credit">Data credit</a>
+    </nav>
+  </header>
+
+  <section id="abstract">
+    <div class="sec-num">01</div>
+    <h2>Abstract</h2>
+    <div class="abstract-box">
+      <p>
+        Content teams with large page inventories need a way to decide which pages deserve
+        a title rewrite first, out of thousands with real search visibility but weak clicks.
+        This project builds and validates a scoring model on one month (March 2026) of
+        FlyRank's real search-performance warehouse, comparing a transparent hand-written
+        baseline against Logistic Regression and Random Forest classifiers trained on five
+        leakage-checked features. Evaluated with a client-held-out split and Precision@20,
+        both models roughly triple the baseline's accuracy (0.15 &rarr; 0.45&ndash;0.50), though
+        error analysis shows the gain comes almost entirely from detecting CTR mismatch, not
+        from predicting genuine traffic decline. The result is a ranked, reason-coded action
+        playbook intended strictly as a decision-support tool for human content reviewers,
+        not an automated publishing system.
+      </p>
+    </div>
+  </section>
+
+  <section id="intro">
+    <div class="sec-num">02</div>
+    <h2>Introduction</h2>
+    <p>
+      A content team managing a large page inventory can't review every page every week.
+      Someone has to decide, out of thousands of pages, which ones to look at first ,
+      today that decision is usually made by gut feel or a spreadsheet sorted on one column.
+    </p>
+    <p>
+      This project asks a narrower, testable version of that question: <strong>which pages
+      get real search visibility but fail to earn clicks relative to how other pages in the
+      same position tier perform, and does a trained model do a better job answering
+      that than a simple rule?</strong>
+    </p>
+    <p>
+      The decision this supports: a content reviewer or SEO analyst opening a ranked queue
+      and deciding which page's title to rewrite first. The unit of analysis is one page,
+      scored using its own trailing search performance. Getting this wrong is not symmetric:
+      flagging a healthy page wastes a reviewer's limited time; missing a genuinely
+      underperforming page lets it keep losing traffic, unnoticed, for another cycle. That
+      second failure compounds daily and is treated as the costlier mistake throughout this
+      work.
+    </p>
+    <p>
+      A flat rule (<code>"flag if CTR &lt; X"</code>) doesn't hold up under its own data: what
+      counts as a "normal" click-through rate varies meaningfully by how well a page already
+      ranks. A page at position 3 and a page at position 40 need different bars for what
+      counts as underperforming, which is the actual justification for reaching past a
+      single threshold toward a model that can weigh several signals in context.
+    </p>
+  </section>
+
+  <section id="data">
+    <div class="sec-num">03</div>
+    <h2>Data</h2>
+    <p>
+      This analysis uses <strong>one month</strong> (<code>month=2026-03</code>) from
+      FlyRank's <code>fact_content_daily_performance</code> table, part of the
+      <code>FlyRank/internship-warehouse</code> release on Hugging Face, a table that
+      spans roughly <strong>79 million rows</strong> across January&nbsp;2025&ndash;June&nbsp;2026
+      in total. March was chosen deliberately as a mid-panel month, per the program's own
+      data-access guidance, leaving June 2026 sealed as an untouched final test period never
+      used to develop any label or feature logic here.
+    </p>
+    <div class="stat-row">
+      <div class="stat"><div class="n">9.84M</div><div class="lbl">rows in the March partition</div></div>
+      <div class="stat"><div class="n">36.7%</div><div class="lbl">of rows have trustworthy GSC data</div></div>
+      <div class="stat"><div class="n">176,738</div><div class="lbl">unique pages, usable data</div></div>
+      <div class="stat"><div class="n">44</div><div class="lbl">unique clients represented</div></div>
+    </div>
+    <p>
+      Grain was verified empirically, not assumed: grouping by <code>content_hash_id</code>,
+      <code>client_hash_id</code>, and <code>report_date</code> and checking for duplicate
+      combinations returns zero rows, confirming one row is genuinely one page's performance
+      on one day for one client.
+    </p>
+    <h3>What was excluded, and why</h3>
+    <ul>
+      <li><strong>Rows without confirmed GSC availability</strong> (<code>gsc_data_available IS NOT TRUE</code>)
+       , roughly two-thirds of daily rows lack trustworthy search data and are
+        excluded before any scoring, not silently treated as "fine."</li>
+      <li><strong>All GA4 engagement, channel-breakdown session, and AI-referral columns</strong>
+       , real, measured signals, but outside this lane's specific CTR-and-decline
+        question, so left out to keep the feature set honest and interpretable.</li>
+      <li><strong><code>gsc_sum_position</code></strong>, redundant given
+        <code>gsc_avg_position</code> is already available.</li>
+      <li><strong>Client and content identifiers</strong>, used only for grouping,
+        joining, and the honest train/test split; never fed to a model as a learnable
+        signal, and never shown in this paper as real names (all IDs here are anonymized
+        hashes from the source release).</li>
+    </ul>
+    <div class="callout">
+      <p><strong>Named limitation of this slice:</strong> only one month is used, so this
+      data cannot distinguish a page having a persistently bad title from a page simply
+      having one unusually weak month. Client history is also uneven, newer clients'
+      pages may look like false positives simply because they haven't accumulated enough
+      traffic history yet, not because of a real problem.</p>
+    </div>
+  </section>
+
+  <section id="method">
+    <div class="sec-num">04</div>
+    <h2>Methodology</h2>
+
+    <h3>Baseline</h3>
+    <p>
+      A transparent, hand-written rule, computed with no training: for every page,
+      <code>gap = tier_median_ctr &minus; page_ctr</code>, then
+      <code>priority_score = gap &times; impressions</code>. Position tiers
+      (<code>top_3</code>, <code>page_1</code>, <code>striking</code>, <code>page_3_5</code>,
+      <code>deep</code>) were built from the real distribution of <code>avg_position</code>,
+      not guessed boundaries, and tier medians were computed only from pages with a nonzero
+      CTR, over half of all pages get zero clicks, and including them collapses every
+      tier's median CTR to zero, which would make the comparison meaningless.
+    </p>
+
+    <h3>Features (5, all knowable at the decision moment)</h3>
+    <table>
+      <tr><th>Feature</th><th>What it measures</th></tr>
+      <tr><td><code>feat_impressions</code></td><td>Total search impressions, first half of March</td></tr>
+      <tr><td><code>feat_clicks</code></td><td>Total clicks, first half of March</td></tr>
+      <tr><td><code>feat_avg_position</code></td><td>Average search position, first half of March</td></tr>
+      <tr><td><code>feat_days_active</code></td><td>Days with any impressions, first half of March</td></tr>
+      <tr><td><code>feat_ctr</code></td><td>Click-through rate, computed from the two totals above</td></tr>
+    </table>
+    <p>
+      Every feature is computed <code>WHERE period = 'first_half'</code> (March 1&ndash;15
+      only), none of them can see anything from the second half of the month, the
+      exact window the label is built from.
+    </p>
+
+    <h3>Label definition</h3>
+    <p>
+      The target, <code>combined_flag</code>, requires two independently-computed conditions
+      to both be true:
+    </p>
+    <ol>
+      <li><strong><code>declining_flag</code></strong>, impressions dropped 20% or
+        more from the first half of March to the second half.</li>
+      <li><strong><code>ctr_mismatch</code></strong>, CTR is less than half the
+        page's own position tier's median CTR (computed fresh on this data, not reused from
+        the baseline), and the page has at least 100 impressions so the comparison isn't
+        noise from a handful of views.</li>
+    </ol>
+    <p>
+      This label was chosen deliberately over an earlier attempt, and over simply training
+      on the baseline's own <code>gap</code>: a label built from <code>gap</code> directly
+      would let a model just re-learn the baseline formula, making any "the model beats the
+      baseline" claim circular. An earlier, simpler version using only impression decline
+      was also tried and rejected, error analysis showed it wasn't closely tied to
+      this lane's actual CTR question. The combined label keeps the model's target
+      independently observable while staying tied to the real question this work is about.
+    </p>
+
+    <h3>Validation design</h3>
+    <p>
+      Split by <strong>client, not by row</strong>, using scikit-learn's
+      <code>GroupShuffleSplit</code>. If the same client's pages could land in both training
+      and test, a model could partly learn that specific client's quirks rather than a
+      generalizable pattern, grouping forces every model to be tested only on clients
+      it has never seen. Client overlap between train and test was verified at zero for
+      every split used in this work.
+    </p>
+
+    <h3>Leakage audit</h3>
+    <div class="callout warn">
+      <p>
+        <strong>Deliberate leakage test:</strong> adding <code>second_half_impressions</code>
+       , a direct ingredient of the label, as a sixth feature moved
+        Precision@20 from <strong>0.50 to a perfect 1.00</strong>. This is the expected
+        signature of leakage, not genuine skill: the model can "look up" the answer instead
+        of predicting it. This feature was removed; only the 5 honest, first-half-only
+        features are used in every reported result.
+      </p>
+    </div>
+    <p>
+      A second, harder-to-see leakage risk was found while building this week's playbook:
+      training a model on the <strong>full</strong> dataset with no held-out test set at all
+      produced <code>model_score = 1.00</code> for every page, the model was scored on
+      rows it had already been trained on, so its "confidence" reflected memorization, not
+      prediction. Every reported number in this paper comes from a model evaluated only on
+      pages it never saw during training.
+    </p>
+  </section>
+
+  <section id="results">
+    <div class="sec-num">05</div>
+    <h2>Results</h2>
+    <p>
+      All numbers below use <strong>Precision@20</strong>: of the top 20 ranked pages, what
+      fraction are genuinely positive under <code>combined_flag</code>. The base rate for
+      this label is <strong>~9.7%</strong>, a model matching that base rate in its
+      top 20 would be doing no better than random.
+    </p>
+
+    <h3>Model vs. baseline, same held-out split</h3>
+    <table>
+      <tr><th>Method</th><th class="num">Precision@20</th></tr>
+      <tr><td>Baseline (hand-written rule)</td><td class="num">0.15</td></tr>
+      <tr><td>Logistic Regression</td><td class="num">0.50</td></tr>
+      <tr><td>Random Forest</td><td class="num">0.40&ndash;0.50*</td></tr>
+    </table>
+    <figure>
+      <img src="img/model_vs_baseline.png" alt="Bar chart comparing Precision@20 across the baseline rule, Logistic Regression, and Random Forest">
+      <figcaption><strong>Both trained models clearly beat the baseline</strong> on the same client-held-out split, roughly 2.5&ndash;3&times; the baseline, and well above the 9.7% base rate. *Random Forest's exact score varied between otherwise-identical runs with the same seed, see Limitations for why.</figcaption>
+    </figure>
+
+    <h3>Precision@20 is not one fixed number</h3>
+    <p>
+      Three different, equally valid client-grouped splits of the same data produced three
+      different Precision@20 figures for the same model:
+    </p>
+    <table>
+      <tr><th>Split (test_size)</th><th class="num">Train rows</th><th class="num">Test rows</th><th class="num">Test clients</th><th class="num">Precision@20</th></tr>
+      <tr><td>0.2</td><td class="num">138,771</td><td class="num">13,210</td><td class="num">9</td><td class="num">0.50</td></tr>
+      <tr><td>0.3</td><td class="num">109,396</td><td class="num">41,279</td><td class="num">14</td><td class="num">0.45</td></tr>
+      <tr><td>0.5</td><td class="num">54,844</td><td class="num">95,831</td><td class="num">22</td><td class="num">0.70</td></tr>
+    </table>
+    <figure>
+      <img src="img/precision_by_split.png" alt="Bar chart showing Precision@20 varying across three different train/test splits">
+      <figcaption><strong>The split with the highest score was deliberately not chosen</strong> as the "official" result. The 0.3 split was selected for its own reasoning (balancing training data against honest coverage) before its score was known, picking the best-looking split after seeing results would undermine the same discipline this paper argues for.</figcaption>
+    </figure>
+
+    <h3>Two models, same accuracy, almost no agreement</h3>
+    <p>
+      Logistic Regression and Random Forest reach similar Precision@20 through very
+      different reasoning: Logistic Regression's decision is dominated almost entirely by
+      CTR, while Random Forest spreads its attention across impressions, CTR, and position.
+    </p>
+    <div class="stat-row">
+      <div class="stat"><div class="n">0</div><div class="lbl">of 20 top picks shared between the two models</div></div>
+    </div>
+    <figure>
+      <img src="img/logistic_regression_decision_boundary.png" alt="Contour plot of Logistic Regression's predicted probability across CTR and impressions, with real training points overlaid">
+      <figcaption><strong>Logistic Regression's decision surface across CTR and impressions</strong> (other features held at their training median). Predicted probability rises sharply as CTR falls and impressions grow, consistent with the model's CTR coefficient (~-18) being far larger than any other feature.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/random_forest_importance.png" alt="Bar chart of Random Forest feature importances, impressions and CTR leading">
+      <figcaption><strong>Random Forest distributes its reasoning more evenly</strong> across impressions, CTR, and position, rather than concentrating on one signal.</figcaption>
+    </figure>
+
+    <h3>Error analysis: what the models get wrong</h3>
+    <p>
+      Every single wrong pick in both models' top-20 lists shares the same pattern:
+      <code>ctr_mismatch = True</code> but <code>declining_flag = False</code>. Neither
+      model ever failed on the CTR-mismatch half of the label, every miss came from
+      the decline half. This makes sense structurally: none of the five features capture
+      change over time at all, since all of them are first-half-only snapshots. The models
+      have no signal telling them whether a page's traffic is trending up or down heading
+      into the second half of the month.
+    </p>
+    <div class="callout">
+      <p><strong>Directional interpretation, not a complete explanation:</strong> the
+      measured gap over the baseline most likely reflects the models' ability to detect
+      CTR-mismatch specifically, not genuine decline prediction. This is based on inspecting
+      a small sample of real errors, not a definitive account of the full performance gap.</p>
+    </div>
+    <figure>
+      <img src="img/score_distribution.png" alt="Histogram of model scores across the test set, right-skewed toward low probability with a smaller high-confidence tail">
+      <figcaption>Distribution of model scores across the test set, illustrating the shape consistent with the label's ~9.7% base rate: most pages score low, a smaller group scores with high confidence.</figcaption>
+    </figure>
+  </section>
+
+  <section id="limits">
+    <div class="sec-num">06</div>
+    <h2>Limitations &amp; honest framing</h2>
+    <p>What this work can claim: <em>observed</em> patterns in one month of real data,
+      a <em>measured</em> improvement over a transparent baseline on a specific held-out
+      split, and a <em>directional</em> signal about which pages deserve review first. What
+      it explicitly does not claim: that a title rewrite will cause a CTR improvement (no
+      experiment was run to test that), that this reveals anything about Google's ranking
+      algorithm, or that any single reported number is precise rather than approximate.</p>
+    <ul>
+      <li>The model reliably detects CTR-mismatch but is essentially guessing on the
+        decline half of the label, since none of the five features capture change over
+        time.</li>
+      <li>Precision@20 varies meaningfully by which random split of clients is used
+        (0.45&ndash;0.70 across three tested splits), not a fixed, precise number.</li>
+      <li>Logistic Regression and Random Forest reach the same accuracy through completely
+        different reasoning and agree on zero of the same top-20 picks, a sign of
+        real uncertainty a single accuracy figure doesn't show.</li>
+      <li>Random Forest's exact Precision@20 varied between two otherwise-identical runs
+        (0.50, then 0.40) with the same seed, likely due to internal randomness under
+        parallel training, a further reason to treat any single number as approximate.</li>
+      <li>Only ~37% of March's daily rows have trustworthy GSC data; the model's view of
+        the inventory is necessarily partial.</li>
+      <li>Client history is uneven; newer pages may look like false positives simply
+        because they haven't had time to build up traffic yet.</li>
+      <li>This slice covers 44 clients over one month; the model has no guarantee it
+        generalizes to new clients, other months, or seasonal shifts.</li>
+      <li>Training on the full dataset without a held-out test set produced a perfect,
+        artificial-looking score (1.00), a reminder that reported performance can
+        look better than it is if evaluated incorrectly.</li>
+    </ul>
+  </section>
+
+  <section id="recs">
+    <div class="sec-num">07</div>
+    <h2>Ranked recommendations: the action playbook</h2>
+    <p>
+      The validated model produces a ranked queue with one reason code and a tier-aware
+      action, intended strictly as decision support for a human reviewer.
+    </p>
+    <table>
+      <tr><th>Action</th><th>When</th><th class="num">Pages</th></tr>
+      <tr><td><span class="action-tag">rewrite_title</span></td><td>Default, most position tiers</td><td class="num">30,100</td></tr>
+      <tr><td><span class="action-tag caution">review_before_rewrite</span></td><td><code>top_3</code> pages, rewriting an already-strong ranking risks disrupting it</td><td class="num">4,500</td></tr>
+      <tr><td><span class="action-tag caution">verify_before_rewrite</span></td><td><code>striking</code> pages, this tier's baseline CTR behaved inconsistently in earlier analysis</td><td class="num">6,679</td></tr>
+    </table>
+
+    <h3>Human review rules</h3>
+    <ul>
+      <li>Check which split produced a given score before trusting it, reliability
+        depends on which evaluation it came from.</li>
+      <li>Read the tier-based action before acting; the tier signals how much caution to
+        apply, not just what to do.</li>
+      <li>Treat the ranking as a prioritized starting point, never a verdict, open
+        and read the actual page first.</li>
+      <li>Where the two models disagree on a page, treat that disagreement itself as a
+        signal of uncertainty.</li>
+      <li>Periodically spot-check pages with no trustworthy GSC data, they are
+        invisible to the model, not confirmed-safe.</li>
+      <li>Don't limit review to the very top of the list; the current queue is concentrated
+        in a small number of clients and tiers.</li>
+    </ul>
+
+    <h3>What must never be automated</h3>
+    <ul>
+      <li>No title change is published without a human reading the page and approving it
+        first.</li>
+      <li>No score is acted on without knowing which split and validation produced it.</li>
+      <li><code>top_3</code> pages are never auto-rewritten, regardless of model score.</li>
+      <li>The model's output is never shown to a client or end-user as a certainty ,
+        internal review use only.</li>
+    </ul>
+
+    <h3>Monitoring &amp; retrain triggers</h3>
+    <ul>
+      <li><strong>Time-based:</strong> retrain on more recent data at least every 2&ndash;3
+        months; a single-month snapshot doesn't capture drift.</li>
+      <li><strong>Outcome-tracking:</strong> if rewritten pages show no CTR improvement
+        after 4&ndash;6 weeks, re-examine the label and feature set, not just retrain.</li>
+      <li><strong>Client-coverage:</strong> re-validate on any newly onboarded client's own
+        data before trusting recommendations for them.</li>
+      <li><strong>Tier-median staleness:</strong> recompute tier medians whenever the model
+        is retrained, since "typical" CTR per tier can drift over time.</li>
+    </ul>
+  </section>
+
+  <section id="repro">
+    <div class="sec-num">08</div>
+    <h2>Reproducibility</h2>
+    <p>Every step in this paper traces back to a specific, committed notebook in the project repository:</p>
+    <ul>
+      <li><code>work/notebooks/w01_research_question.ipynb</code>, lane choice and framing</li>
+      <li><code>work/notebooks/w02_ml_task_framing.ipynb</code>, task type, target, success metric</li>
+      <li><code>work/notebooks/w03_data_contract.ipynb</code>, grain verification, field sort, availability check</li>
+      <li><code>work/notebooks/w04_baseline_score.ipynb</code>, the transparent baseline rule</li>
+      <li><code>work/notebooks/w05_model.ipynb</code>, Logistic Regression and Random Forest, method choice, split design</li>
+      <li><code>work/notebooks/w06_validation_audit.ipynb</code>, naive-vs-grouped split comparison, deliberate leakage test</li>
+      <li><code>work/notebooks/w07_action_playbook.ipynb</code>, the final playbook, exports, and figures</li>
+    </ul>
+    <p>
+      All models use <code>random_state=42</code>. Data source:
+      <code>hf://datasets/FlyRank/internship-warehouse</code>,
+      partition <code>month=2026-03</code>. Full repo:
+      <a href="https://github.com/salty-arch/Flyrank-Intern">github.com/salty-arch/Flyrank-Intern</a>.
+    </p>
+    <div class="callout">
+      <p><strong>Note on Random Forest reproducibility:</strong> across separate runs with
+      the identical <code>random_state=42</code> and a near-identical client split, Random
+      Forest's Precision@20 was observed at both 0.40 and 0.50; Logistic Regression stayed
+      exactly 0.50 both times. This is included as an honest limitation rather than resolved
+      to a single number, see Limitations for the likely cause.</p>
+    </div>
+  </section>
+
+  <section id="credit">
+    <div class="sec-num">09</div>
+    <h2>Acknowledgments &amp; data credit</h2>
+    <p>
+      Built on the FlyRank ML Internship dataset, a real production search
+      intelligence release. Learn more at
+      <a href="https://flyrank.ai" target="_blank" rel="noopener">flyrank.ai</a>.
+    </p>
+    <p>
+      Thanks to the FlyRank ML internship program for the dataset, the weekly skill guides,
+      and the structured, honesty-first framing this project follows throughout.
+    </p>
+  </section>
+
+  <footer>
+    <p>Salman Abid &middot; FlyRank ML Internship, 2026 &middot;
+      <a href="https://github.com/salty-arch/Flyrank-Intern">Repository</a></p>
+  </footer>
+</div>
+
+</body>
+</html>
