@@ -1,0 +1,11 @@
+{
+  "baseline_precision_at_20": 0.15,
+  "logistic_regression_precision_at_20": 0.5,
+  "random_forest_precision_at_20": 0.5,
+  "playbook_split_precision_at_20": 0.45,
+  "wide_split_precision_at_20": 0.7,
+  "validated_split_test_clients": 9,
+  "playbook_split_test_clients": 14,
+  "playbook_total_pages_scored": 41279,
+  "combined_flag_positive_rate": 0.09660418078575611
+}
