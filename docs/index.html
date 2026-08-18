@@ -348,6 +348,50 @@
       tier's median CTR to zero, which would make the comparison meaningless.
     </p>
 
+    <h3>Signal verification, before encoding the rule</h3>
+    <p>
+      Before writing the baseline as code, the two signals it leans on were checked
+      directly against the March data, each with a real bucket table and an honest
+      verdict, rather than assumed to be true.
+    </p>
+    <table>
+      <tr><th>Position tier</th><th class="num">n</th><th class="num">Avg. CTR</th></tr>
+      <tr><td>top_3</td><td class="num">727,362</td><td class="num">0.00476</td></tr>
+      <tr><td>page_1</td><td class="num">1,456,122</td><td class="num">0.00347</td></tr>
+      <tr><td>striking</td><td class="num">519,223</td><td class="num">0.00277</td></tr>
+      <tr><td>page_3_5</td><td class="num">631,491</td><td class="num">0.00164</td></tr>
+      <tr><td>deep</td><td class="num">276,863</td><td class="num">0.00049</td></tr>
+    </table>
+    <p>
+      <strong>Signal 1, CTR-vs-position (behind the CTR-fix logic): CONFIRMED.</strong>
+      Average CTR decreases step by step as position tier gets worse, with no
+      exceptions across all five tiers, supporting the rule's core assumption that a
+      tier-relative comparison is more meaningful than one flat threshold. Worth
+      noting: an earlier, median-based check on the starter dataset (Week 1) showed a
+      messier pattern in the same tiers, most likely because a small number of
+      high-CTR outlier pages pull the mean upward unevenly by tier. This CONFIRMED
+      verdict is read as "CTR-by-tier is a real, directional pattern on average," not
+      "every individual page cleanly matches its tier's typical CTR."
+    </p>
+    <table>
+      <tr><th>Impression bucket</th><th class="num">n</th><th class="num">Avg. CTR</th></tr>
+      <tr><td>0&ndash;99</td><td class="num">2,972,453</td><td class="num">0.00309</td></tr>
+      <tr><td>100&ndash;999</td><td class="num">606,189</td><td class="num">0.00307</td></tr>
+      <tr><td>1,000&ndash;9,999</td><td class="num">32,291</td><td class="num">0.00271</td></tr>
+      <tr><td>10,000&ndash;99,999</td><td class="num">128</td><td class="num">0.00384</td></tr>
+    </table>
+    <p>
+      <strong>Signal 2, impression volume (behind quick-win logic): MIXED.</strong>
+      The hypothesis was that impression volume represents real-world reach, and
+      therefore justifies multiplying it against the CTR gap. Average CTR stays
+      roughly flat across impression buckets, which is a partial win: it means volume
+      carries genuinely new information rather than duplicating what CTR already
+      shows, so the multiplier isn't redundant. But this data doesn't directly prove
+      the underlying claim that more impressions equal more real-world cost when a
+      page underperforms, that piece remains a reasonable but unproven assumption
+      behind the rule's design.
+    </p>
+
     <h3>Features (5, all knowable at the decision moment)</h3>
     <table>
       <tr><th>Feature</th><th>What it measures</th></tr>
@@ -414,6 +458,15 @@
       rows it had already been trained on, so its "confidence" reflected memorization, not
       prediction. Every reported number in this paper comes from a model evaluated only on
       pages it never saw during training.
+    </p>
+    <p>
+      The same leakage trap was run a second time, independently, during the earlier data
+      contract stage, on a simpler <code>declining_flag</code>-only label. The result was
+      consistent: Precision@20 moved from <strong>0.30 (honest)</strong> to
+      <strong>1.00 (leaky)</strong> when the same label-derived column was added. Two
+      separate demonstrations, at two different points in the project, on two different
+      labels, produced the same signature, which is stronger evidence than either
+      demonstration alone that this specific leakage check is doing its job reliably.
     </p>
   </section>
 
