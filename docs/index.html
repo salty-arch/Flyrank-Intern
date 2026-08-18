@@ -238,16 +238,22 @@
     <div class="abstract-box">
       <p>
         Content teams with large page inventories need a way to decide which pages deserve
-        a title rewrite first, out of thousands with real search visibility but weak clicks.
+        a title rewrite first, out of thousands with real search visibility but weak clicks,
+        and today that decision is usually made by gut feel rather than evidence.
         This project builds and validates a scoring model on one month (March 2026) of
-        FlyRank's real search-performance warehouse, comparing a transparent hand-written
-        baseline against Logistic Regression and Random Forest classifiers trained on five
-        leakage-checked features. Evaluated with a client-held-out split and Precision@20,
-        both models roughly triple the baseline's accuracy (0.15 &rarr; 0.45&ndash;0.50), though
-        error analysis shows the gain comes almost entirely from detecting CTR mismatch, not
-        from predicting genuine traffic decline. The result is a ranked, reason-coded action
-        playbook intended strictly as a decision-support tool for human content reviewers,
-        not an automated publishing system.
+        FlyRank's real, multi-client search-performance warehouse, comparing a transparent
+        hand-written baseline against Logistic Regression and Random Forest classifiers
+        trained on five leakage-checked features.
+        Evaluated with a client-held-out split and Precision@20, both models roughly triple
+        the baseline's accuracy (0.15 &rarr; 0.45&ndash;0.50 typical, up to 0.70 on some
+        splits, precision varies meaningfully by which clients are held out), though the two
+        models agree on zero of the same top-20 picks despite matching accuracy.
+        Error analysis shows the gain comes almost entirely from detecting CTR mismatch, not
+        from predicting genuine traffic decline, since none of the five features capture
+        change over time.
+        The result is a ranked, reason-coded action playbook with tier-aware recommendations
+        (rewrite, review-first, or verify) intended strictly as a decision-support tool for
+        human content reviewers, not an automated publishing system.
       </p>
     </div>
   </section>
@@ -465,8 +471,11 @@
       consistent: Precision@20 moved from <strong>0.30 (honest)</strong> to
       <strong>1.00 (leaky)</strong> when the same label-derived column was added. Two
       separate demonstrations, at two different points in the project, on two different
-      labels, produced the same signature, which is stronger evidence than either
-      demonstration alone that this specific leakage check is doing its job reliably.
+      labels, produced the same signature, which suggests this leakage check is internally
+      consistent. This shows repeatability, not comprehensive validity, both tests used
+      the same kind of leak (a direct label ingredient added as a feature); subtler forms
+      of leakage, such as a feature indirectly correlated with the label through some
+      third variable, were not tested and could still be present undetected.
     </p>
   </section>
 
@@ -561,6 +570,13 @@
       <li>The model reliably detects CTR-mismatch but is essentially guessing on the
         decline half of the label, since none of the five features capture change over
         time.</li>
+      <li>The baseline's <code>gap &times; impressions</code> formula, and every 
+        baseline-vs-model comparison in this paper that depends on it, rests on an 
+        unproven assumption: that more impressions mean more real-world cost when a page 
+        underperforms. Signal 2's verification (Methodology) found volume is a genuinely 
+        non-redundant multiplier, but never tested whether the multiplicative weighting 
+        itself is the right one; an alternative baseline (e.g. <code>gap</code> alone, or 
+        <code>gap &times; log(impressions)</code>) was not tried.</li>
       <li>Precision@20 varies meaningfully by which random split of clients is used
         (0.45&ndash;0.70 across three tested splits), not a fixed, precise number.</li>
       <li>Logistic Regression and Random Forest reach the same accuracy through completely
@@ -639,13 +655,13 @@
     <h2>Reproducibility</h2>
     <p>Every step in this paper traces back to a specific, committed notebook in the project repository:</p>
     <ul>
-      <li><code>work/notebooks/w01_research_question.ipynb</code>, lane choice and framing</li>
-      <li><code>work/notebooks/w02_ml_task_framing.ipynb</code>, task type, target, success metric</li>
-      <li><code>work/notebooks/w03_data_contract.ipynb</code>, grain verification, field sort, availability check</li>
-      <li><code>work/notebooks/w04_baseline_score.ipynb</code>, the transparent baseline rule</li>
-      <li><code>work/notebooks/w05_model.ipynb</code>, Logistic Regression and Random Forest, method choice, split design</li>
-      <li><code>work/notebooks/w06_validation_audit.ipynb</code>, naive-vs-grouped split comparison, deliberate leakage test</li>
-      <li><code>work/notebooks/w07_action_playbook.ipynb</code>, the final playbook, exports, and figures</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w01_research_question.ipynb"><code>w01_research_question.ipynb</code></a>, lane choice and framing</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w02_ml_task_framing.ipynb"><code>w02_ml_task_framing.ipynb</code></a>, task type, target, success metric</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w03_data_contract.ipynb"><code>w03_data_contract.ipynb</code></a>, grain verification, field sort, availability check, features, and leakage trap</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w04_baseline_score.ipynb"><code>w04_baseline_score.ipynb</code></a>, signal verification and the transparent baseline rule</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w05_model.ipynb"><code>w05_model.ipynb</code></a>, Logistic Regression and Random Forest, method choice, split design</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w06_validation_audit.ipynb"><code>w06_validation_audit.ipynb</code></a>, naive-vs-grouped split comparison, deliberate leakage test</li>
+      <li><a href="https://github.com/salty-arch/Flyrank-Intern/blob/main/work/notebooks/w07_action_playbook.ipynb"><code>w07_action_playbook.ipynb</code></a>, the final playbook, exports, and figures</li>
     </ul>
     <p>
       All models use <code>random_state=42</code>. Data source:
